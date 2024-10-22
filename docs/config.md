@@ -181,8 +181,11 @@ config file at runtime.
     - [`local-discovery` profile](#local-discovery-profile)
     - [`default-networking` profile](#default-networking-profile)
     - [`flatfs` profile](#flatfs-profile)
+    - [`pebbleds` profile](#pebbleds-profile)
     - [`badgerds` profile](#badgerds-profile)
     - [`lowpower` profile](#lowpower-profile)
+    - [`announce-off` profile](#announce-off-profile)
+    - [`announce-on` profile](#announce-on-profile)
     - [`legacy-cid-v0` profile](#legacy-cid-v0-profile)
     - [`test-cid-v1` profile](#test-cid-v1-profile)
   - [Types](#types)
@@ -299,7 +302,7 @@ Map of HTTP headers to set on responses from the RPC (`/api/v0`) HTTP server.
 Example:
 ```json
 {
-	"Foo": ["bar"]
+  "Foo": ["bar"]
 }
 ```
 
@@ -522,39 +525,34 @@ Spec defines the structure of the ipfs datastore. It is a composable structure,
 where each datastore is represented by a json object. Datastores can wrap other
 datastores to provide extra functionality (eg metrics, logging, or caching).
 
-This can be changed manually, however, if you make any changes that require a
-different on-disk structure, you will need to run the [ipfs-ds-convert
-tool](https://github.com/ipfs/ipfs-ds-convert) to migrate data into the new
-structures.
-
-For more information on possible values for this configuration option, see
-[docs/datastores.md](datastores.md)
+> [!NOTE]
+> For more information on possible values for this configuration option, see [`kubo/docs/datastores.md`](datastores.md)
 
 Default:
 ```
 {
   "mounts": [
-	{
-	  "child": {
-		"path": "blocks",
-		"shardFunc": "/repo/flatfs/shard/v1/next-to-last/2",
-		"sync": true,
-		"type": "flatfs"
-	  },
-	  "mountpoint": "/blocks",
-	  "prefix": "flatfs.datastore",
-	  "type": "measure"
-	},
-	{
-	  "child": {
-		"compression": "none",
-		"path": "datastore",
-		"type": "levelds"
-	  },
-	  "mountpoint": "/",
-	  "prefix": "leveldb.datastore",
-	  "type": "measure"
-	}
+  {
+    "child": {
+    "path": "blocks",
+    "shardFunc": "/repo/flatfs/shard/v1/next-to-last/2",
+    "sync": true,
+    "type": "flatfs"
+    },
+    "mountpoint": "/blocks",
+    "prefix": "flatfs.datastore",
+    "type": "measure"
+  },
+  {
+    "child": {
+    "compression": "none",
+    "path": "datastore",
+    "type": "levelds"
+    },
+    "mountpoint": "/",
+    "prefix": "leveldb.datastore",
+    "type": "measure"
+  }
   ],
   "type": "mount"
 }
@@ -1145,7 +1143,7 @@ Example:
         "API" : {
           "Endpoint" : "https://pinningservice.tld:1234/my/api/path",
           "Key" : "someOpaqueKey"
-				}
+        }
       }
     }
   }
@@ -2401,9 +2399,9 @@ Inverse profile of the test profile.
 
 ### `flatfs` profile
 
-Configures the node to use the flatfs datastore. Flatfs is the default datastore.
+Configures the node to use the flatfs datastore.
+Flatfs is the default, most battle-tested and reliable datastore.
 
-This is the most battle-tested and reliable datastore.
 You should use this datastore if:
 
 - You need a very simple and very reliable datastore, and you trust your
@@ -2414,7 +2412,31 @@ You should use this datastore if:
 - You want to minimize memory usage.
 - You are ok with the default speed of data import, or prefer to use `--nocopy`.
 
-This profile may only be applied when first initializing the node.
+> [!WARNING]
+> This profile may only be applied when first initializing the node via `ipfs init --profile flatfs`
+
+> [!NOTE]
+> See caveats and configuration options at [`datastores.md#flatfs`](datastores.md#flatfs)
+
+### `pebbleds` profile
+
+Configures the node to use the pebble high-performance datastore.
+
+Pebble is a LevelDB/RocksDB inspired key-value store focused on performance and internal usage by CockroachDB.
+You should use this datastore if:
+
+- You need a datastore that is focused on performance.
+- You need a datastore that is good for multi-terrabyte data sets.
+- You need reliability by default, but may choose to disable WAL for maximum performance when reliability is not critical.
+- You want a datastore that does not need GC cycles and does not use more space than necessary
+- You want a datastore that does not take several minutes to start with large repositories
+- You want a datastore that performs well even with default settings, but can optimized by setting configuration to tune it for your specific needs.
+
+> [!WARNING]
+> This profile may only be applied when first initializing the node via `ipfs init --profile pebbleds`
+
+> [!NOTE]
+> See other caveats and configuration options at [`datastores.md#pebbleds`](datastores.md#pebbleds)
 
 ### `badgerds` profile
 
@@ -2435,22 +2457,38 @@ Also, be aware that:
 - Good for medium-size datastores, but may run into performance issues if your dataset is bigger than a terabyte.
 - The current implementation is based on old badger 1.x which is no longer supported by the upstream team.
 
-This profile may only be applied when first initializing the node.
+> [!WARNING]
+> This profile may only be applied when first initializing the node via `ipfs init --profile badgerds`
+
+> [!NOTE]
+> See other caveats and configuration options at [`datastores.md#pebbleds`](datastores.md#pebbleds)
 
 ### `lowpower` profile
 
-Reduces daemon overhead on the system. Affects node
-functionality - performance of content discovery and data
-fetching may be degraded.
+Reduces daemon overhead on the system by disabling optional swarm services.
+
+- [`Routing.Type`](#routingtype) set to `autoclient` (no DHT server, only client).
+- `Swarm.ConnMgr` set to maintain minimum number of p2p connections at a time.
+- Disables [`AutoNAT`](#autonat).
+- Disables [`Swam.RelayService`](#swarmrelayservice).
+
+> [!NOTE]
+> This profile is provided for legacy reasons.
+> With modern Kubo setting the above should not be necessary.
+
+### `announce-off` profile
+
+Disables [Reprovider](#reprovider) system (and announcing to Amino DHT).
 
 > [!CAUTION]
-> Local data won't be announced on routing systems like Amino DHT.
+> The main use case for this is setups with manual Peering.Peers config.
+> Data from this node will not be announced on the DHT. This will make
+> DHT-based routing an data retrieval impossible if this node is the only
+> one hosting it, and other peers are not already connected to it.
 
-- `Swarm.ConnMgr` set to maintain minimum number of p2p connections at a time.
-- Disables [`Reprovider`](#reprovider) service → no CID will be announced on Amino DHT and other routing systems(!)
-- Disables [`AutoNAT`](#autonat).
+### `announce-on` profile
 
-Use this profile with caution.
+(Re-)enables [Reprovider](#reprovider) system (reverts [`announce-off` profile](#annouce-off-profile).
 
 ### `legacy-cid-v0` profile
 
