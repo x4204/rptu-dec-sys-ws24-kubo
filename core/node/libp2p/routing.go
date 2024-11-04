@@ -134,6 +134,15 @@ func Routing(in p2pOnlineRoutingIn) irouting.ProvideManyRouter {
 
 	var cRouters []*routinghelpers.ParallelRouter
 
+	// TODO: removing this causes a crash on `./ipfs init`
+	for _, v := range routers {
+		cRouters = append(cRouters, &routinghelpers.ParallelRouter{
+			IgnoreError:             true,
+			DoNotWaitForSearchValue: true,
+			Router:                  v.Routing,
+		})
+	}
+
 	return routinghelpers.NewComposableParallel(cRouters)
 }
 
