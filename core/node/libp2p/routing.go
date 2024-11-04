@@ -191,6 +191,9 @@ func autoRelayFeeder(cfgPeering config.Peering, peerChan chan<- peer.AddrInfo) f
 				debug.PrintStack()
 			}
 		}()
+		go func() {
+			defer close(done)
+		}()
 
 		lc.Append(fx.Hook{
 			OnStop: func(_ context.Context) error {
