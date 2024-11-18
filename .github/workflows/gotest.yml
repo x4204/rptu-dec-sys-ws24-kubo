@@ -45,7 +45,7 @@ jobs:
           make -j "$PARALLEL" test/unit/gotest.junit.xml &&
             [[ ! $(jq -s -c 'map(select(.Action == "fail")) | .[]' test/unit/gotest.json) ]]
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@6d798873df2b1b8e5846dba6fb86631229fbcb17 # v4.4.0
+        uses: codecov/codecov-action@5c47607acb93fed5485fdbf7232e8a31425f672a # v5.0.2
         if: failure() || success()
         with:
           name: unittests
