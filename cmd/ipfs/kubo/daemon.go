@@ -295,7 +295,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		if !domigrate {
 			fmt.Println("Not running migrations of fs-repo now.")
 			fmt.Println("Please get fs-repo-migrations from https://dist.ipfs.tech")
-			return fmt.Errorf("fs-repo requires migration")
+			return errors.New("fs-repo requires migration")
 		}
 
 		// Read Migration section of IPFS config
@@ -436,7 +436,7 @@ func daemonFunc(req *cmds.Request, re cmds.ResponseEmitter, env cmds.Environment
 		ncfg.Routing = libp2p.NilRouterOption
 	case routingOptionCustomKwd:
 		if cfg.Routing.AcceleratedDHTClient.WithDefault(config.DefaultAcceleratedDHTClient) {
-			return fmt.Errorf("Routing.AcceleratedDHTClient option is set even tho Routing.Type is custom, using custom .AcceleratedDHTClient needs to be set on DHT routers individually")
+			return errors.New("Routing.AcceleratedDHTClient option is set even tho Routing.Type is custom, using custom .AcceleratedDHTClient needs to be set on DHT routers individually")
 		}
 		ncfg.Routing = libp2p.ConstructDelegatedRouting(
 			cfg.Routing.Routers,
@@ -512,7 +512,11 @@ take effect.
 	if err != nil {
 		return err
 	}
-	node.Process.AddChild(goprocess.WithTeardown(cctx.Plugins.Close))
+	select {
+	case <-node.Process.Closing():
+	default:
+		node.Process.AddChild(goprocess.WithTeardown(cctx.Plugins.Close))
+	}
 
 	// construct api endpoint - every time
 	apiErrc, err := serveHTTPApi(req, cctx)
