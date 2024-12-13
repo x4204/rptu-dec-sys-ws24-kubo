@@ -620,6 +620,10 @@ func (dht *IpfsDHT) rtPeerLoop() {
 					bootstrapCount = 0
 					timerCh = nil
 				}
+
+				logger.Warnw("SKIP dht.addPeerToRTChan", "p", p)
+				continue
+
 				// queryPeer set to true as we only try to add queried peers to the RT
 				newlyAdded, err := dht.routingTable.TryAddPeer(p, true, isBootsrapping)
 				if err != nil {
