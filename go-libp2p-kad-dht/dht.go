@@ -202,7 +202,7 @@ func New(ctx context.Context, h host.Host, options ...Option) (*IpfsDHT, error) 
 	dht.maxRecordAge = cfg.MaxRecordAge
 	dht.enableProviders = cfg.EnableProviders
 	dht.enableValues = cfg.EnableValues
-	dht.disableFixLowPeers = cfg.DisableFixLowPeers
+	dht.disableFixLowPeers = true // cfg.DisableFixLowPeers
 
 	dht.Validator = cfg.Validator
 	dht.msgSender = cfg.MsgSenderBuilder(h, dht.protocols)
@@ -238,7 +238,7 @@ func New(ctx context.Context, h host.Host, options ...Option) (*IpfsDHT, error) 
 	// since RT membership is decoupled from connectivity
 	go dht.persistRTPeersInPeerStore()
 
-	dht.rtPeerLoop()
+	// dht.rtPeerLoop()
 
 	// Fill routing table with currently connected peers that are DHT servers
 	for _, p := range dht.host.Network().Peers() {
@@ -620,9 +620,6 @@ func (dht *IpfsDHT) rtPeerLoop() {
 					bootstrapCount = 0
 					timerCh = nil
 				}
-
-				logger.Warnw("SKIP dht.addPeerToRTChan", "p", p)
-				continue
 
 				// queryPeer set to true as we only try to add queried peers to the RT
 				newlyAdded, err := dht.routingTable.TryAddPeer(p, true, isBootsrapping)
